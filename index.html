@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solicitação de orçamento ACO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#d7191f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<script src="vendor/jspdf.umd.min.js" defer></script>
+<script src="vendor/jspdf.plugin.autotable.min.js" defer></script>
+<style>
+/* VOICE: formulário de trabalho, preciso e calmo
+   IDEA: a ficha impressa da ACO, em papel, com o carimbo vermelho no canto
+   PICTURE: a própria ficha preenchível, com a tabela de itens como peça central
+   COLOUR and TYPE: vermelho ACO #d7191f, grafite, branco; Inter Tight + Inter
+   LAYOUT: cabeçalho em faixa vermelha, folha única centralizada, ações fixas ao pé */
+:root{color-scheme:light dark;--bg:light-dark(#eceae6,#16181b);--paper:light-dark(#fff,#202327);--ink:light-dark(#1d1f22,#eceff2);--mute:light-dark(#5d636b,#a3aab3);--line:light-dark(#d5d7da,#3a3f46);--red:#d7191f;--redd:light-dark(#a90f14,#ff6b6f);--soft:light-dark(#fbeaea,#3a2223);--ok:light-dark(#16794a,#5fd49a)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Inter,system-ui,sans-serif;overflow-x:clip}
+header.top{background:var(--red);color:#fff;padding:22px max(5vw,16px) 64px}
+.top .in{max-width:1080px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.top h1{font:700 clamp(26px,4vw,40px)/1.05 "Inter Tight",sans-serif;margin:0;text-wrap:balance}
+.top p{margin:6px 0 0;opacity:.9;font-size:15px}
+.mark{display:flex;gap:3px;flex:none}.mark span{width:34px;height:44px;border:2px solid #fff;display:grid;place-items:center;font:700 22px "Inter Tight",sans-serif}
+main{max-width:1080px;margin:-44px auto 0;padding:0 max(2vw,10px) 120px}
+.sheet{background:var(--paper);border-radius:6px;box-shadow:0 1px 2px #0002,0 12px 40px #0001;padding:clamp(18px,3vw,36px)}
+h2{font:600 18px/1.2 "Inter Tight",sans-serif;margin:28px 0 12px;display:flex;align-items:center;gap:10px}
+h2:first-child{margin-top:0}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px 14px}
+.f{display:flex;flex-direction:column;gap:4px;grid-column:span 4}
+.s2{grid-column:span 2}.s3{grid-column:span 3}.s5{grid-column:span 5}.s6{grid-column:span 6}.s7{grid-column:span 7}.s8{grid-column:span 8}.s12{grid-column:span 12}
+label{font-size:13px;color:var(--mute);font-weight:500}
+input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:9px 10px;min-height:44px;width:100%}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--red);outline-offset:1px;border-color:transparent}
+.with{display:flex;gap:6px}.with input{flex:1}
+button{font:600 15px Inter,sans-serif;min-height:44px;padding:0 16px;border-radius:4px;border:1px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer;white-space:nowrap}
+button.pri{background:var(--red);border-color:var(--red);color:#fff}
+button.ghost{border-color:transparent;background:none;color:var(--mute)}
+button:disabled{opacity:.5;cursor:default}
+.msg{font-size:13px;min-height:18px;color:var(--mute)}.msg.err{color:var(--redd)}.msg.ok{color:var(--ok)}
+.seg{display:inline-flex;align-self:start;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg label{display:flex;align-items:center;gap:6px;padding:0 16px;min-height:44px;font-size:15px;color:var(--ink);cursor:pointer}
+.seg input{width:auto;min-height:0}.seg label+label{border-left:1px solid var(--line)}
+.seg label:has(input:checked){background:var(--soft)}
+table{width:100%;border-collapse:collapse}
+th{font-size:12px;text-transform:none;color:var(--mute);font-weight:600;text-align:left;padding:6px;border-bottom:2px solid var(--ink)}
+td{padding:6px;border-bottom:1px solid var(--line);vertical-align:top}
+td.n{width:30px;color:var(--mute);font-size:13px;padding-top:18px;text-align:right}
+.cc{width:120px}.cq{width:130px}.co{width:22%}.cx{width:44px}
+.qty{display:flex;align-items:center;gap:6px}.qty input{text-align:right}.qty span{font-size:13px;color:var(--mute);width:22px}
+.ac{position:relative}
+.list{position:absolute;z-index:20;left:0;top:calc(100% + 2px);width:min(640px,86vw);max-height:320px;overflow:auto;background:var(--paper);border:1px solid var(--line);border-radius:4px;box-shadow:0 10px 30px #0003;display:none}
+.list.on{display:block}
+.opt{display:grid;grid-template-columns:76px 1fr;gap:8px;padding:9px 12px;cursor:pointer;font-size:14px;border-bottom:1px solid var(--line)}
+.opt b{font-variant-numeric:tabular-nums;font-weight:600}.opt small{display:block;color:var(--mute);font-size:12px}
+.opt.hi,.opt:hover{background:var(--soft)}
+.empty{padding:12px;font-size:14px;color:var(--mute)}
+.note{margin-top:22px;padding:12px 14px;border-left:3px solid var(--red);background:var(--soft);font-weight:500;font-size:15px}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--paper);border-top:1px solid var(--line);padding:10px max(5vw,12px);z-index:30}
+.bar .in{max-width:1080px;margin:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.bar .sp{flex:1 1 200px;font-size:13px;color:var(--mute);overflow-wrap:anywhere}
+.base{font-size:13px;color:var(--mute);margin:8px 0 0}
+@media(max-width:760px){.f,.s2,.s3,.s5,.s6,.s7,.s8{grid-column:span 6}.wide{grid-column:span 12}}
+@media(max-width:600px){.f,.s2,.s3,.s5,.s6,.s7,.s8{grid-column:span 12}.mark span{width:26px;height:34px;font-size:17px}
+ table.items thead{display:none}table.items tr{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px 0;border-bottom:1px solid var(--line)}
+ table.items td{border:0;padding:0;width:auto}table.items td.n{display:none}table.items td.desc,table.items td.co{grid-column:span 2}
+ table.items td::before{content:attr(data-l);display:block;font-size:12px;color:var(--mute)}}
+</style>
+</head>
+<body>
+<header class="top"><div class="in">
+ <div><h1>Solicitação de orçamento</h1><p>ACO Drenagem · ficha para pedido de proposta</p></div>
+ <div class="mark" aria-label="ACO"><span>A</span><span>C</span><span>O</span></div>
+</div></header>
+<main><form class="sheet" id="frm" autocomplete="off">
+ <h2>Cliente</h2>
+ <div class="grid">
+  <div class="f s5"><label for="cnpj">CNPJ</label><div class="with"><input id="cnpj" inputmode="numeric" placeholder="00.000.000/0000-00"><button type="button" id="bCnpj">Buscar</button></div><div class="msg" id="mCnpj"></div></div>
+  <div class="f s7"><label for="cliente">Cliente</label><input id="cliente"></div>
+  <div class="f s6"><label for="endereco">Endereço</label><input id="endereco"></div>
+  <div class="f s6"><label for="bairro">Bairro</label><input id="bairro"></div>
+  <div class="f s5"><label for="cidade">Cidade</label><input id="cidade"></div>
+  <div class="f s2"><label for="uf">Estado</label><input id="uf" maxlength="2"></div>
+  <div class="f s5"><label for="cep">CEP</label><input id="cep" inputmode="numeric"></div>
+  <div class="f s6"><label for="contato">Contato</label><input id="contato"></div>
+  <div class="f s6"><label for="cargo">Cargo</label><input id="cargo"></div>
+  <div class="f s3"><label for="tel">Tel</label><input id="tel" inputmode="tel"></div>
+  <div class="f s3"><label for="cel">CEL</label><input id="cel" inputmode="tel"></div>
+  <div class="f s6"><label for="email">Email</label><input id="email" type="email"></div>
+ </div>
+ <h2>Projeto</h2>
+ <div class="grid">
+  <div class="f s3"><label for="ptipo">Tipo</label><input id="ptipo" list="tipos"><datalist id="tipos"><option>Indústria</option><option>Logística</option><option>Comercial</option><option>Residencial</option><option>Viário</option><option>Aeroporto</option><option>Posto de combustível</option><option>Público / Institucional</option></datalist></div>
+  <div class="f s4"><label for="pnome">Nome</label><input id="pnome"></div>
+  <div class="f s3"><label for="plocal">Local</label><input id="plocal" placeholder="Cidade – UF"></div>
+  <div class="f s2"><label for="pcep">CEP</label><input id="pcep" inputmode="numeric"></div>
+  <div class="msg s12" id="mCep" style="grid-column:span 12;min-height:0"></div>
+  <div class="f s12"><label>Concorrência</label><div class="seg"><label><input type="radio" name="conc" value="Sim">Sim</label><label><input type="radio" name="conc" value="Não">Não</label></div></div>
+ </div>
+ <h2>Itens</h2>
+ <table class="items"><thead><tr><th></th><th class="cc">Código</th><th>Descrição</th><th class="cq">Quant.</th><th class="co">Observação</th><th class="cx"></th></tr></thead><tbody id="rows"></tbody></table>
+ <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button type="button" id="bAdd">+ Adicionar item</button></div>
+ <p class="base" id="base"></p>
+ <div class="note">Obs: Caso não tenham as quantidades e descrição das peças, enviar projeto para análise.</div>
+ <h2>Representante</h2>
+ <div class="grid">
+  <div class="f s6"><label for="rnome">Nome</label><input id="rnome"></div>
+  <div class="f s6"><label for="rempresa">Empresa</label><input id="rempresa"></div>
+  <div class="f s4"><label for="rcrea">Registro profissional</label><input id="rcrea"></div>
+  <div class="f s3"><label for="rtel">Telefone</label><input id="rtel" inputmode="tel"></div>
+  <div class="f s5"><label for="remail">Email</label><input id="remail" type="email"></div>
+ </div>
+ <p class="base">Os dados do representante ficam salvos e não são apagados em Limpar.</p>
+</form></main>
+<div class="bar"><div class="in">
+ <span class="sp" id="status">Rascunho salvo neste navegador.</span>
+ <button type="button" class="ghost" id="bInstall" hidden>Instalar app</button>
+ <button type="button" class="ghost" id="bClear">Limpar</button>
+ <button type="button" class="pri" id="bPdf">Gerar PDF</button>
+</div></div>
+<script>
+{
+let PRODUTOS=[];
+let LOGO="";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nrm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+async function loadData(){
+  try{const r=await fetch('data/produtos.json',{cache:'no-cache'});PRODUTOS=await r.json()}catch(e){$('base').textContent='Não foi possível carregar a base de produtos.';return}
+  PRODUTOS.forEach(p=>p.k=nrm(p.c+' '+p.d+' '+p.l));
+  $('base').textContent=`Base com ${PRODUTOS.length} itens dos catálogos ACO (Monoblock, Multidrain/Multiline, Kerbdrain, Qmax, Self/Hexaline, Stormbrixx, Separadores). Itens fora da base podem ser digitados livremente.`;
+  try{const b=await (await fetch('assets/logo-aco.jpg')).blob();LOGO=await new Promise(ok=>{const fr=new FileReader();fr.onload=()=>ok(fr.result);fr.readAsDataURL(b)})}catch(e){}
+}
+const FIELDS=['cnpj','cliente','endereco','bairro','cidade','uf','cep','contato','cargo','tel','cel','email','ptipo','pnome','plocal','pcep'];
+let rows=[];
+const REP={rnome:'Pedro Paulo Novaes de Mendonça',rempresa:'Avateng Engenharia',rcrea:'CREA-DF 34.234/D-DF',rtel:'',remail:'pedropnm@avateng.com.br'};const RK='aco-representante-v1';
+const blank=()=>({c:'',d:'',u:'',q:'',o:''});
+
+function search(q){
+  const t=nrm(q).trim().split(/\s+/).filter(Boolean);
+  if(!t.length) return [];
+  const r=PRODUTOS.filter(p=>t.every(w=>p.k.includes(w)));
+  const q0=nrm(q).trim();
+  r.sort((a,b)=>(b.c.startsWith(q0)-a.c.startsWith(q0))||a.d.localeCompare(b.d));
+  return r.slice(0,40);
+}
+function render(){
+  $('rows').innerHTML=rows.map((r,i)=>`<tr data-i="${i}">
+   <td class="n">${i+1}</td>
+   <td class="cc" data-l="Código"><div class="ac"><input data-k="c" value="${esc(r.c)}" inputmode="numeric" aria-label="Código item ${i+1}"><div class="list"></div></div></td>
+   <td class="desc" data-l="Descrição"><div class="ac"><input data-k="d" value="${esc(r.d)}" placeholder="Busque por código, linha ou descrição" aria-label="Descrição item ${i+1}"><div class="list"></div></div></td>
+   <td class="cq" data-l="Quant."><div class="qty"><input data-k="q" value="${esc(r.q)}" inputmode="decimal" aria-label="Quantidade item ${i+1}"><span>${esc(r.u)}</span></div></td>
+   <td class="co" data-l="Observação"><input data-k="o" value="${esc(r.o)}" aria-label="Observação item ${i+1}"></td>
+   <td class="cx"><button type="button" class="ghost" data-del="${i}" aria-label="Remover item ${i+1}">✕</button></td></tr>`).join('');
+}
+function showList(inp){
+  const box=inp.nextElementSibling, res=search(inp.value);
+  box._res=res; box._hi=-1;
+  if(!inp.value.trim()){box.classList.remove('on');return}
+  box.innerHTML=res.length?res.map((p,j)=>`<div class="opt" data-j="${j}"><b>${esc(p.c)}</b><span>${esc(p.d)}<small>${esc(p.l)} · ${esc(p.u)}</small></span></div>`).join(''):'<div class="empty">Nenhum item da base. O texto digitado será mantido.</div>';
+  box.classList.add('on');
+}
+function pick(inp,p){
+  const i=+inp.closest('tr').dataset.i;
+  Object.assign(rows[i],{c:p.c,d:p.d,u:p.u});
+  if(i===rows.length-1) rows.push(blank());
+  render(); save();
+  const next=$('rows').querySelector(`tr[data-i="${i}"] input[data-k="q"]`); next&&next.focus();
+}
+const tb=$('rows');
+tb.addEventListener('input',e=>{
+  const k=e.target.dataset.k; if(!k) return;
+  const i=+e.target.closest('tr').dataset.i; rows[i][k]=e.target.value;
+  if(k==='c'||k==='d'){
+    if(k==='c'){const m=PRODUTOS.find(p=>p.c===e.target.value.trim()); if(m){pick(e.target,m);return}}
+    showList(e.target);
+  }
+  save();
+});
+tb.addEventListener('keydown',e=>{
+  const box=e.target.nextElementSibling; if(!box||!box.classList.contains('on')) return;
+  const n=(box._res||[]).length;
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();box._hi=(box._hi+(e.key==='ArrowDown'?1:-1)+n)%n;
+    box.querySelectorAll('.opt').forEach((o,j)=>o.classList.toggle('hi',j===box._hi));box.querySelector('.hi')?.scrollIntoView({block:'nearest'})}
+  else if(e.key==='Enter'){e.preventDefault(); if(n) pick(e.target,box._res[Math.max(box._hi,0)])}
+  else if(e.key==='Escape') box.classList.remove('on');
+});
+tb.addEventListener('mousedown',e=>{const o=e.target.closest('.opt'); if(!o) return; e.preventDefault();
+  const box=o.parentElement; pick(box.previousElementSibling,box._res[+o.dataset.j])});
+tb.addEventListener('focusout',e=>{const b=e.target.nextElementSibling; if(b&&b.classList.contains('list')) setTimeout(()=>b.classList.remove('on'),120)});
+tb.addEventListener('click',e=>{const d=e.target.dataset.del; if(d===undefined) return; rows.splice(+d,1); if(!rows.length) rows.push(blank()); render(); save()});
+$('bAdd').onclick=()=>{rows.push(blank());render();save();tb.querySelector('tr:last-child input[data-k="c"]').focus()};
+
+/* máscaras */
+const dig=s=>String(s||'').replace(/\D/g,'');
+const fmtCnpj=s=>{const d=dig(s).slice(0,14);return d.replace(/^(\d{2})(\d)/,'$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/,'$1.$2.$3').replace(/\.(\d{3})(\d)/,'.$1/$2').replace(/(\d{4})(\d)/,'$1-$2')};
+const fmtCep=s=>{const d=dig(s).slice(0,8);return d.length>5?d.slice(0,5)+'-'+d.slice(5):d};
+const fmtTel=s=>{const d=dig(s).slice(0,11);if(d.length<3)return d;const a=d.slice(0,2),r=d.slice(2);return `(${a}) `+(r.length>8?r.slice(0,5)+'-'+r.slice(5):r.length>4?r.slice(0,4)+'-'+r.slice(4):r)};
+function cnpjValido(c){c=dig(c);if(c.length!==14||/^(\d)\1+$/.test(c))return false;
+  const calc=n=>{let s=0,p=n-7;for(let i=0;i<n;i++){s+=c[i]*p--;if(p<2)p=9}const r=s%11;return r<2?0:11-r};
+  return calc(12)==c[12]&&calc(13)==c[13]}
+$('cnpj').addEventListener('input',e=>{e.target.value=fmtCnpj(e.target.value)});
+['cep','pcep'].forEach(id=>$(id).addEventListener('input',e=>{e.target.value=fmtCep(e.target.value)}));
+['tel','cel','rtel'].forEach(id=>$(id).addEventListener('blur',e=>{e.target.value=fmtTel(e.target.value);save()}));
+$('uf').addEventListener('input',e=>{e.target.value=e.target.value.toUpperCase()});
+
+/* APIs públicas: BrasilAPI com CNPJ.ws / ViaCEP como alternativa */
+async function getJSON(url){const r=await fetch(url,{headers:{Accept:'application/json'}});if(!r.ok){const er=new Error('http '+r.status);er.status=r.status;throw er}return r.json()}
+const title=s=>String(s||'').toLowerCase().replace(/(^|[\s/(-])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase()).replace(/\b(De|Da|Do|Das|Dos|E)\b/g,w=>w.toLowerCase()).replace(/\b(Ltda|S\/a|Me|Epp|Eireli)\b/gi,w=>w.toUpperCase());
+function setMsg(el,t,cls){el.textContent=t;el.className='msg'+(cls?' '+cls:'')}
+const BLOCK=navigator.onLine===false?'Sem conexão: a consulta precisa de internet. Preencha manualmente.':'Não foi possível consultar o serviço agora. Tente de novo ou preencha manualmente.';
+$('bCnpj').onclick=async()=>{
+  const c=dig($('cnpj').value),m=$('mCnpj');
+  if(!cnpjValido(c)){setMsg(m,'CNPJ inválido. Confira os dígitos.','err');return}
+  setMsg(m,'Consultando…');$('bCnpj').disabled=true;
+  let d=null,src='';
+  try{const j=await getJSON('https://brasilapi.com.br/api/cnpj/v1/'+c);src='BrasilAPI';
+    d={razao:j.razao_social,end:[j.descricao_tipo_de_logradouro,j.logradouro].filter(Boolean).join(' ')+(j.numero?', '+j.numero:'')+(j.complemento?' – '+j.complemento:''),
+       bairro:j.bairro,cidade:j.municipio,uf:j.uf,cep:j.cep,tel:j.ddd_telefone_1,email:j.email,sit:j.descricao_situacao_cadastral,cnae:j.cnae_fiscal_descricao}}
+  catch(e1){
+    if(e1.status===404){setMsg(m,'CNPJ não encontrado na Receita Federal.','err');$('bCnpj').disabled=false;return}
+    try{const j=await getJSON('https://publica.cnpj.ws/cnpj/'+c),s=j.estabelecimento||{};src='CNPJ.ws';
+      d={razao:j.razao_social,end:[s.tipo_logradouro,s.logradouro].filter(Boolean).join(' ')+(s.numero?', '+s.numero:'')+(s.complemento?' – '+s.complemento:''),
+         bairro:s.bairro,cidade:s.cidade&&s.cidade.nome,uf:s.estado&&s.estado.sigla,cep:s.cep,tel:(s.ddd1||'')+(s.telefone1||''),email:s.email,sit:s.situacao_cadastral,cnae:s.atividade_principal&&s.atividade_principal.descricao}}
+    catch(e2){setMsg(m,e2.status===404?'CNPJ não encontrado.':BLOCK,'err');$('bCnpj').disabled=false;return}
+  }
+  const put=(id,v)=>{if(v&&String(v).trim())$(id).value=v};
+  put('cliente',title(d.razao));put('endereco',title(d.end));put('bairro',title(d.bairro));put('cidade',title(d.cidade));put('uf',(d.uf||'').toUpperCase());
+  put('cep',fmtCep(d.cep));if(d.tel&&!$('tel').value)put('tel',fmtTel(d.tel));if(d.email&&!$('email').value)put('email',String(d.email).toLowerCase());
+  setMsg(m,`${src}: situação ${String(d.sit||'—').toLowerCase()}${d.cnae?' · '+d.cnae:''}`,/ativa/i.test(d.sit||'')?'ok':'err');
+  $('bCnpj').disabled=false;save();
+};
+$('cnpj').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('bCnpj').click()}});
+$('pcep').addEventListener('change',async()=>{
+  const c=dig($('pcep').value),m=$('mCep'); if(c.length!==8) return;
+  setMsg(m,'Consultando CEP…');
+  try{let j,cid,uf;try{j=await getJSON('https://brasilapi.com.br/api/cep/v1/'+c);cid=j.city;uf=j.state}
+      catch(e){j=await getJSON('https://viacep.com.br/ws/'+c+'/json/');if(j.erro)throw{status:404};cid=j.localidade;uf=j.uf}
+    if(!$('plocal').value)$('plocal').value=`${cid} – ${uf}`;setMsg(m,`CEP do projeto: ${cid} – ${uf}`,'ok');save()}
+  catch(e){setMsg(m,e.status===404?'CEP do projeto não encontrado.':BLOCK,'err')}
+});
+
+/* rascunho local */
+const KEY='aco-solicitacao-v1';
+function save(){try{const v={rows,conc:(document.querySelector('[name=conc]:checked')||{}).value||''};FIELDS.forEach(f=>v[f]=$(f).value);localStorage.setItem(KEY,JSON.stringify(v));const r={};Object.keys(REP).forEach(k=>r[k]=$(k).value);localStorage.setItem(RK,JSON.stringify(r));$('status').textContent='Rascunho salvo neste navegador.'}catch(e){$('status').textContent=''}}
+function load(){let v=null,rp=null;try{v=JSON.parse(localStorage.getItem(KEY)||'null');rp=JSON.parse(localStorage.getItem(RK)||'null')}catch(e){}
+  Object.keys(REP).forEach(k=>$(k).value=(rp&&rp[k]!=null)?rp[k]:REP[k]);
+  if(v){FIELDS.forEach(f=>$(f).value=v[f]||'');rows=(v.rows||[]).map(r=>Object.assign(blank(),r));const r=document.querySelector(`[name=conc][value="${v.conc}"]`);if(r)r.checked=true}
+  if(!rows.length||rows[rows.length-1].c||rows[rows.length-1].d) rows.push(blank());
+  render()}
+$('frm').addEventListener('input',e=>{if(!e.target.dataset.k)save()});
+$('frm').addEventListener('change',save);
+$('frm').addEventListener('submit',e=>e.preventDefault());
+let armed=false;
+$('bClear').onclick=()=>{if(!armed){armed=true;$('bClear').textContent='Confirmar limpeza';setTimeout(()=>{armed=false;$('bClear').textContent='Limpar'},3000);return}
+  armed=false;$('bClear').textContent='Limpar';FIELDS.forEach(f=>$(f).value='');document.querySelectorAll('[name=conc]').forEach(r=>r.checked=false);
+  rows=[blank()];['mCnpj','mCep'].forEach(id=>setMsg($(id),''));render();save()};
+
+/* PDF no formato da ficha */
+function buildPdf(){
+  const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'mm',format:'a4'});
+  const W=210,L=15,R=195; const v=id=>$(id).value.trim();
+  doc.setFont('helvetica','bold');doc.setFontSize(16);doc.text('Solicitação de orçamento',L,24);
+  try{doc.addImage(LOGO,'JPEG',R-30,10,30,22.8)}catch(e){}
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(110);
+  doc.text('Emitida em '+new Date().toLocaleDateString('pt-BR'),L,30);doc.setTextColor(0);
+  const top=38,rowH=9; let y=top+6;
+  const cell=(lab,val,x,w,yy)=>{doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.text(lab,x,yy);const lw=doc.getTextWidth(lab)+1.5;
+    doc.setFont('helvetica','normal');const t=doc.splitTextToSize(val||'',w-lw);doc.text(t,x+lw,yy);return t.length};
+  const lines=[
+    [['Cliente:',v('cliente'),L+2,108],['CNPJ:',v('cnpj'),L+112,66]],
+    [['Endereço:',v('endereco'),L+2,70],['Bairro:',v('bairro'),L+74,36],['Cidade:',v('cidade'),L+112,40],['Estado:',v('uf'),L+154,24]],
+    [['Contato:',v('contato'),L+2,70],['Cargo:',v('cargo'),L+74,36],['CEP:',v('cep'),L+112,66]],
+    [['Tel:',v('tel'),L+2,70],['CEL:',v('cel'),L+74,36],['Email:',v('email'),L+112,66]],
+    [['Projeto (Tipo):',v('ptipo'),L+2,70],['(Nome):',v('pnome'),L+74,36],['(Local):',v('plocal'),L+112,40],['CEP:',v('pcep'),L+154,24]]];
+  lines.forEach(ln=>{let mx=1;ln.forEach(c=>mx=Math.max(mx,cell(c[0],c[1],c[2],c[3],y)));y+=Math.max(rowH,mx*3.8+4)});
+  doc.setLineWidth(.3);doc.rect(L,top,R-L,y-top-3);
+  y+=4;const conc=(document.querySelector('[name=conc]:checked')||{}).value||'';
+  doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.text('CONCORRÊNCIA :',L,y);
+  doc.setFont('helvetica','normal');doc.text(conc?conc:'Sim / Não',L+doc.getTextWidth('CONCORRÊNCIA : ')+1,y);
+  const body=rows.filter(r=>r.c||r.d||r.q).map(r=>[r.c,r.d,(r.q?r.q+(r.u?' '+r.u:''):''),r.o]);
+  while(body.length<8) body.push(['','','','']);
+  doc.autoTable({startY:y+6,margin:{left:L,right:W-R},head:[['CODIGO','DESCRIÇÃO','QUANT.','OBSERVAÇÃO']],body,theme:'grid',
+    styles:{font:'helvetica',fontSize:8.5,cellPadding:1.6,lineColor:[0,0,0],lineWidth:.2,textColor:0,minCellHeight:6},
+    headStyles:{fillColor:[255,255,255],textColor:0,fontStyle:'bolditalic',halign:'center',lineWidth:.3},
+    columnStyles:{0:{cellWidth:20,halign:'center'},1:{cellWidth:94},2:{cellWidth:22,halign:'center'},3:{cellWidth:44}}});
+  let fy=doc.lastAutoTable.finalY+10; if(fy>280){doc.addPage();fy=20}
+  doc.setFont('helvetica','bold');doc.setFontSize(9.5);
+  doc.text(doc.splitTextToSize('Obs: Caso não tenham as quantidades e descrição das peças, enviar projeto para análise.',R-L),L+2,fy);
+  const rp=['rnome','rempresa','rcrea','rtel','remail'].map(v);
+  if(rp.some(Boolean)){
+    let ry=fy+14; if(ry>270){doc.addPage();ry=20}
+    doc.setLineWidth(.3);doc.line(L,ry-5,R,ry-5);
+    doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.text('Representante comercial',L,ry);
+    doc.setFont('helvetica','normal');
+    const l1=[rp[0],rp[1]].filter(Boolean).join(' · '),l2=[rp[2],rp[3],rp[4]].filter(Boolean).join(' · ');
+    if(l1)doc.text(l1,L,ry+5); if(l2)doc.text(l2,L,ry+(l1?10:5));
+  }
+  return doc;
+}
+let dl=null;
+(async()=>{try{if(window.claude&&claude.use) dl=await claude.use('downloads')}catch(e){}})();
+$('bPdf').onclick=async()=>{
+  if(!window.jspdf||!window.jspdf.jsPDF.API.autoTable){$('status').textContent='Gerador de PDF não carregou. Verifique a conexão e recarregue.';return}
+  const nome=('Solicitacao_orcamento_'+(nrm($('cliente').value).replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||'ACO')).slice(0,60)+'.pdf';
+  const doc=buildPdf(), blob=doc.output('blob');
+  try{
+    if(dl){await dl.save({filename:nome,data:blob});$('status').textContent='PDF gerado: '+nome;return}
+    const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=nome;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);
+    $('status').textContent='PDF gerado: '+nome;
+  }catch(e){$('status').textContent='Download não concluído'+(e&&e.message?': '+e.message:'.')}
+};
+load();loadData();
+let deferred=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('bInstall').hidden=false});
+$('bInstall').onclick=async()=>{if(!deferred)return;deferred.prompt();await deferred.userChoice;deferred=null;$('bInstall').hidden=true};
+if('serviceWorker' in navigator&&location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
