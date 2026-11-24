@@ -211,7 +211,7 @@ $('uf').addEventListener('input',e=>{e.target.value=e.target.value.toUpperCase()
 
 /* APIs públicas: BrasilAPI com CNPJ.ws / ViaCEP como alternativa */
 async function getJSON(url){const r=await fetch(url,{headers:{Accept:'application/json'}});if(!r.ok){const er=new Error('http '+r.status);er.status=r.status;throw er}return r.json()}
-const title=s=>String(s||'').toLowerCase().replace(/(^|[\s/(-])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase()).replace(/\b(De|Da|Do|Das|Dos|E)\b/g,w=>w.toLowerCase()).replace(/\b(Ltda|S\/a|Me|Epp|Eireli)\b/gi,w=>w.toUpperCase());
+const title=s=>String(s||'').toLowerCase().replace(/(^|[\s/(-])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase()).replace(/\b(De|Da|Do|Das|Dos|E)\b/g,w=>w.toLowerCase()).replace(/\b(S\/a|Sa|Me|Epp|Eireli|Cnpj)\b/g,w=>w.toUpperCase()).replace(/\bLtda\b/gi,'Ltda');
 function setMsg(el,t,cls){el.textContent=t;el.className='msg'+(cls?' '+cls:'')}
 const BLOCK=navigator.onLine===false?'Sem conexão: a consulta precisa de internet. Preencha manualmente.':'Não foi possível consultar o serviço agora. Tente de novo ou preencha manualmente.';
 $('bCnpj').onclick=async()=>{
